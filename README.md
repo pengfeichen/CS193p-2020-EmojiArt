@@ -65,7 +65,7 @@ except on an emoji) should deselect all emoji.
 ZStack {
   //Code
 }
-.onTapGesture() { emojiSelection.removeAll() }
+  .onTapGesture() { emojiSelection.removeAll() }
 ```
 6. Dragging a selected emoji should move the entire selection to follow the user’s finger. 
 7. If the user makes a dragging gesture when there is no selection, pan the entire
@@ -132,18 +132,18 @@ pinch.
     
 private func zoomGesture() -> some Gesture {
     MagnificationGesture()
-    .updating($gestureZoomScale) { latestGestureScale, gestureZoomScale, transaction in
-        gestureZoomScale = latestGestureScale
-    }
-    .onEnded { finalGestureScale in
-        if emojiSelection.isEmpty {
-            steadyStateZoomScale *= finalGestureScale
-        } else {
-            for emoji in emojiSelection {
-                document.scaleEmoji(emoji, by: finalGestureScale)
-            }
-        }
-    }
+      .updating($gestureZoomScale) { latestGestureScale, gestureZoomScale, transaction in
+          gestureZoomScale = latestGestureScale
+      }
+      .onEnded { finalGestureScale in
+          if emojiSelection.isEmpty {
+              steadyStateZoomScale *= finalGestureScale
+          } else {
+              for emoji in emojiSelection {
+                  document.scaleEmoji(emoji, by: finalGestureScale)
+              }
+          }
+      }
 }
 
 // View Model. EmojiArtDocument.swift
@@ -187,5 +187,5 @@ mutating func deleteEmoji(_ emoji: EmojiArt.Emoji) {
 // View - EmojiArtDocumentView.swift
 
 Text(emoji.text)
-.gesture(singleTapToSelect(emoji).exclusively(before: longPressGesture(emoji)))
+  .gesture(singleTapToSelect(emoji).exclusively(before: longPressGesture(emoji)))
 ```
