@@ -1,7 +1,7 @@
 # Course Stanford CS193p 2020 - Solutions for Assignment 4 Emoji Art
 > 
-> Projects are written in **Swift 5.1** and **Xcode Version 12.4**
->
+> Projects are written in **Swift 5.1** and **Xcode Version 12.4**<br>
+> [Required Tasks](#Required-Tasks) and [Extra Credit](#Extra-Credit)
 
 ## Emoji Art 
 #### Required Tasks
