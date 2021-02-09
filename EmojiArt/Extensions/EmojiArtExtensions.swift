@@ -212,8 +212,8 @@ extension UIImage {
 
 extension Set where Element: Identifiable {
     mutating func toggleMatching(_ item: Element) {
-        if self.contains(matching: item) {
-            self.remove(item)
+        if let index = self.firstIndex(matching: item) {
+            self.remove(at: index)
         } else {
             self.insert(item)
         }
