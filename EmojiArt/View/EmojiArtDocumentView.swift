@@ -74,7 +74,6 @@ struct EmojiArtDocumentView: View {
     private func singleTapToSelect(_ emoji: EmojiArt.Emoji) -> some Gesture {
         TapGesture(count: 1)
             .onEnded {
-                print("single tapped")
                 emojiSelection.toggleMatching(emoji)
             }
     }
@@ -124,16 +123,24 @@ struct EmojiArtDocumentView: View {
         gestureDragOffset * zoomScale
     }
     
+    // Extra Credits: Allow dragging unselected emoji separately.
+    @State private var selectedEmoji: EmojiArt.Emoji?
     private func dragEmojiGesture(_ emoji: EmojiArt.Emoji) -> some Gesture {
         DragGesture()
             .updating($gestureDragOffset) { latestDragGestureValue, gestureDragOffset, transaction in
                 gestureDragOffset = latestDragGestureValue.translation / zoomScale
-                
+            }
+            .onChanged { _ in
+                selectedEmoji = emoji
             }
             .onEnded { finalDragGestureValue in
                 let offSet = finalDragGestureValue.translation / zoomScale
                 
-                for emoji in emojiSelection {
+                if emojiSelection.contains(matching: emoji) {
+                    for emoji in emojiSelection {
+                        document.moveEmoji(emoji, by: offSet)
+                    }
+                } else {
                     document.moveEmoji(emoji, by: offSet)
                 }
             }
@@ -173,8 +180,14 @@ struct EmojiArtDocumentView: View {
         location = CGPoint(x: location.x * zoomScale, y: location.y * zoomScale)
         location = CGPoint(x: location.x + size.width/2, y: location.y + size.height/2)
         location = CGPoint(x: location.x + panOffset.width, y: location.y + panOffset.height)
-        if emojiSelection.contains(matching: emoji) {
-            location = CGPoint(x: location.x + dragOffset.width, y: location.y + dragOffset.height)
+        
+        if let selectedEmoji = selectedEmoji {
+        
+            if emojiSelection.contains(matching: selectedEmoji), emojiSelection.contains(matching: emoji){
+                location = CGPoint(x: location.x + dragOffset.width, y: location.y + dragOffset.height)
+            } else if emoji == selectedEmoji {
+                location = CGPoint(x: location.x + dragOffset.width, y: location.y + dragOffset.height)
+            }
         }
 
         return location
