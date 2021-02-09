@@ -68,6 +68,8 @@ ZStack {
 .onTapGesture() { emojiSelection.removeAll() }
 ```
 6. Dragging a selected emoji should move the entire selection to follow the user’s finger. 
+7. If the user makes a dragging gesture when there is no selection, pan the entire
+document. 
 >1. To drag a selected emoji, we need to add `gesture()` view modifier for each emoji, and a gesture function `dragEmojiGesture(_ emoji:)` to return a `DragGesture` to handle the action. 
 ```swift
 // View - EmojiArtDocumentView.swift
@@ -99,4 +101,91 @@ private func dragEmojiGesture(_ emoji: EmojiArt.Emoji) -> some Gesture {
           } 
       }
 }
+
+// Update position of each emoji accordingly.
+
+private func position(for emoji: EmojiArt.Emoji, in size: CGSize) -> CGPoint  {
+    var location = emoji.location
+    location = CGPoint(x: location.x * zoomScale, y: location.y * zoomScale)
+    location = CGPoint(x: location.x + size.width/2, y: location.y + size.height/2)
+    location = CGPoint(x: location.x + panOffset.width, y: location.y + panOffset.height)
+
+    if emojiSelection.contains(matching: emoji) {
+        location = CGPoint(x: location.x + dragOffset.width, y: location.y + dragOffset.height)
+    }
+
+    return location
+
+}
+```
+8. If the user makes a pinching gesture anywhere in the EmojiArt document and there is
+a selection, all of the emojis in the selection should be scaled by the amount of the
+pinch. 
+9. If there is no selection at the time of a pinch, the entire document should be scaled. 
+> 1. Modify the `zoomGesture()` handler to update the `steadyStateZoomScale` variable if there is no selection, or scale the emojis is there are emojis selected. The scaling is done through `scaleEmoji` in the View Model.
+```swift
+// View - EmojiArtDocumentView.swift
+
+// Scale the emojis if there is a selection, or scale the entire document is there is not selection.
+@State private var steadyStateZoomScale: CGFloat = 1.0
+@GestureState private var gestureZoomScale: CGFloat = 1.0
+    
+private func zoomGesture() -> some Gesture {
+    MagnificationGesture()
+    .updating($gestureZoomScale) { latestGestureScale, gestureZoomScale, transaction in
+        gestureZoomScale = latestGestureScale
+    }
+    .onEnded { finalGestureScale in
+        if emojiSelection.isEmpty {
+            steadyStateZoomScale *= finalGestureScale
+        } else {
+            for emoji in emojiSelection {
+                document.scaleEmoji(emoji, by: finalGestureScale)
+            }
+        }
+    }
+}
+
+// View Model. EmojiArtDocument.swift
+
+func scaleEmoji(_ emoji: EmojiArt.Emoji, by scale: CGFloat) {
+    if let index = emojiArt.emojis.firstIndex(matching: emoji) {
+        emojiArt.emojis[index].size = Int((CGFloat(emojiArt.emojis[index].size) * scale).rounded(.toNearestOrEven))
+    }
+}
+```
+10.Make it possible to delete emojis from the EmojiArt document. This Required Task is
+intentionally not saying what user-interface actions should cause this. Be creative and
+try to find a way to delete the emojis that feels comfortable and intuitive. 
+>1. Add `longPressGesture(_ emoji:)` to handle LongPressGesture.
+```swift
+// View - EmojiArtDocumentView.swift
+
+private func longPressGesture(_ emoji: EmojiArt.Emoji) -> some Gesture {
+    LongPressGesture(minimumDuration: 1)
+        .onEnded { finished in
+            print("long press ended: \(finished)")
+            document.deleteEmoji(emoji)
+        }
+}
+
+// View Model. EmojiArtDocument.swift
+func deleteEmoji(_ emoji: EmojiArt.Emoji) {
+    emojiArt.deleteEmoji(emoji)
+}
+
+// Model. EmojiArt.swift
+mutating func deleteEmoji(_ emoji: EmojiArt.Emoji) {
+    if let matchIndex = emojis.firstIndex(of: emoji) {
+        emojis.remove(at: matchIndex)
+    }
+}
+
+```
+>2. Compose a ExclusiveGesture that consists of a TapGesture and LongPressGesture. 
+```swift
+// View - EmojiArtDocumentView.swift
+
+Text(emoji.text)
+.gesture(singleTapToSelect(emoji).exclusively(before: longPressGesture(emoji)))
 ```
