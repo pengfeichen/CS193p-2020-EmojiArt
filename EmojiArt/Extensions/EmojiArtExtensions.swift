@@ -210,6 +210,7 @@ extension UIImage {
     }
 }
 
+// Extension to Set
 extension Set where Element: Identifiable {
     mutating func toggleMatching(_ item: Element) {
         if let index = self.firstIndex(matching: item) {

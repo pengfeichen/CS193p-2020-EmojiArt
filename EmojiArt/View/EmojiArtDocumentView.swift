@@ -9,6 +9,7 @@ import SwiftUI
 
 struct EmojiArtDocumentView: View {
     @ObservedObject var document: EmojiArtDocument
+    @State private var emojiSelection = Set<EmojiArt.Emoji>()
 
     var body: some View {
         VStack {
@@ -27,7 +28,7 @@ struct EmojiArtDocumentView: View {
                 ZStack {
 
                     Color.white.overlay(
-                        OptionalImage(uiImage: self.document.backgroundImage)
+                        OptionalImage(uiImage: document.backgroundImage)
                             .scaleEffect(zoomScale)
                             .offset(panOffset)
                     )
@@ -40,7 +41,11 @@ struct EmojiArtDocumentView: View {
                             .font(animatableWithSize: emojiSelection.contains(matching: emoji) ? emoji.fontSize * steadyStateZoomScale * gestureZoomScale : emoji.fontSize * zoomScale)
                             .background(emojiSelection.contains(matching: emoji) ? Color.orange : nil)
                             .position(position(for: emoji, in: geometry.size))
+                            // Add TapGesture listener
+                            // Add LongPressGesture listener
+                            // Compose two gestures
                             .gesture(singleTapToSelect(emoji).exclusively(before: longPressGesture(emoji)))
+                            // Add DragGesture listner.
                             .gesture(dragEmojiGesture(emoji))
                         
                     }
@@ -54,10 +59,10 @@ struct EmojiArtDocumentView: View {
                 .onDrop(of: ["public.image", "public.text"], isTargeted: nil) { providers, location in
                     var location = CGPoint(x: location.x, y: geometry.convert(location, from: .global).y)
                     location = CGPoint(x: location.x - geometry.size.width / 2, y: location.y - geometry.size.height / 2)
-                    location = CGPoint(x: location.x - self.panOffset.width, y: location.y - self.panOffset.height)
-                    location = CGPoint(x: location.x / self.zoomScale, y: location.y / self.zoomScale)
+                    location = CGPoint(x: location.x - panOffset.width, y: location.y - panOffset.height)
+                    location = CGPoint(x: location.x / zoomScale, y: location.y / zoomScale)
 
-                    return self.drop(providers: providers, at: location)
+                    return drop(providers: providers, at: location)
                 }
             }
 
@@ -69,8 +74,8 @@ struct EmojiArtDocumentView: View {
 
     }
     
-    @State private var emojiSelection = Set<EmojiArt.Emoji>()
     
+    // TapGesture handler
     private func singleTapToSelect(_ emoji: EmojiArt.Emoji) -> some Gesture {
         TapGesture(count: 1)
             .onEnded {
@@ -78,8 +83,7 @@ struct EmojiArtDocumentView: View {
             }
     }
 
-    @State private var steadyStateZoomScale: CGFloat = 1.0
-    @GestureState private var gestureZoomScale: CGFloat = 1.0
+
 
     private var zoomScale: CGFloat {
         emojiSelection.isEmpty ? steadyStateZoomScale * gestureZoomScale : steadyStateZoomScale
@@ -93,7 +97,11 @@ struct EmojiArtDocumentView: View {
                 document.deleteEmoji(emoji)
             }
     }
-
+    
+    @State private var steadyStateZoomScale: CGFloat = 1.0
+    @GestureState private var gestureZoomScale: CGFloat = 1.0
+    
+    // Scale the emojis if there is a selection, or scale the entire document is there is not selection.
     private func zoomGesture() -> some Gesture {
         MagnificationGesture()
             .updating($gestureZoomScale) { latestGestureScale, gestureZoomScale, transaction in
@@ -113,18 +121,23 @@ struct EmojiArtDocumentView: View {
     @State private var steadyStatePanOffset: CGSize = .zero
     @GestureState private var gesturePanOffset: CGSize = .zero
     
-    @GestureState private var gestureDragOffset: CGSize = .zero
 
     private var panOffset: CGSize {
         (steadyStatePanOffset + gesturePanOffset) * zoomScale
     }
     
+    // Record offset by DragGesture.
     private var dragOffset: CGSize {
         gestureDragOffset * zoomScale
     }
     
+    // Add Gesture state to update view during a DrageGesture. @GestureState will always return to the startValue set here after the event.
+    @GestureState private var gestureDragOffset: CGSize = .zero
+
+    
     // Extra Credits: Allow dragging unselected emoji separately.
     @State private var selectedEmoji: EmojiArt.Emoji?
+    
     private func dragEmojiGesture(_ emoji: EmojiArt.Emoji) -> some Gesture {
         DragGesture()
             .updating($gestureDragOffset) { latestDragGestureValue, gestureDragOffset, transaction in
@@ -143,16 +156,18 @@ struct EmojiArtDocumentView: View {
                 } else {
                     document.moveEmoji(emoji, by: offSet)
                 }
+                
+                selectedEmoji = nil
             }
     }
 
     private func panGesture() -> some Gesture {
         DragGesture()
             .updating($gesturePanOffset) { latestDragGestureValue, gesturePanOffset, transaction in
-                gesturePanOffset = latestDragGestureValue.translation / self.zoomScale
+                gesturePanOffset = latestDragGestureValue.translation / zoomScale
         }
         .onEnded { finalDragGestureValue in
-            self.steadyStatePanOffset = self.steadyStatePanOffset + (finalDragGestureValue.translation / self.zoomScale)
+                steadyStatePanOffset = steadyStatePanOffset + (finalDragGestureValue.translation / zoomScale)
         }
     }
 
@@ -174,15 +189,14 @@ struct EmojiArtDocumentView: View {
         }
     }
 
-
+    // Update position of each emoji accordingly.
     private func position(for emoji: EmojiArt.Emoji, in size: CGSize) -> CGPoint  {
         var location = emoji.location
         location = CGPoint(x: location.x * zoomScale, y: location.y * zoomScale)
         location = CGPoint(x: location.x + size.width/2, y: location.y + size.height/2)
         location = CGPoint(x: location.x + panOffset.width, y: location.y + panOffset.height)
-        
+        // Check if there is a selectedEmoji
         if let selectedEmoji = selectedEmoji {
-        
             if emojiSelection.contains(matching: selectedEmoji), emojiSelection.contains(matching: emoji){
                 location = CGPoint(x: location.x + dragOffset.width, y: location.y + dragOffset.height)
             } else if emoji == selectedEmoji {
@@ -196,11 +210,11 @@ struct EmojiArtDocumentView: View {
 
     private func drop(providers: [NSItemProvider], at location: CGPoint) -> Bool {
         var found = providers.loadFirstObject(ofType: URL.self) { url in
-            self.document.setBackgroundURL(url)
+            document.setBackgroundURL(url)
         }
         if !found {
             found = providers.loadObjects(ofType: String.self)  { string in
-                self.document.addEmoji(string, at: location, size: self.defaultEmojiSize)
+                document.addEmoji(string, at: location, size: defaultEmojiSize)
             }
         }
         return found
