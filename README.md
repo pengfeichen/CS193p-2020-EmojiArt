@@ -189,3 +189,66 @@ Text(emoji.text)
   .gesture(singleTapToSelect(emoji).exclusively(before: longPressGesture(emoji)))
 ```
 ## Extra Credit
+1. Allow dragging unselected emoji separately. In other words, if the user drags an emoji
+that is part of the selection, move the entire selection (as required above). But if the
+user drags an emoji that is not part of the selection, then move only that emoji (and
+do not add it to the selection). You will find that this is a much more comfortable
+interface for placing emojis.
+>1. Create a new `@State` varible `selectedEmoji` to record which emoji is currently selected. I used a Optional because there might be no emojis selected.
+```swift
+// View - EmojiArtDocumentView.swift
+
+@State private var selectedEmoji: EmojiArt.Emoji?
+```
+>2. Modify the `drageEmojiGesture` handler to change `selectedEmoji` variable to the emoji currently being dragged. If the emoji is selected, it is moved as required. But if the emoji is not in selection, move the emoji anyway. 
+```swift
+// View - EmojiArtDocumentView.swift
+
+private func dragEmojiGesture(_ emoji: EmojiArt.Emoji) -> some Gesture {
+    DragGesture()
+        .updating($gestureDragOffset) { latestDragGestureValue, gestureDragOffset, transaction in
+            gestureDragOffset = latestDragGestureValue.translation / zoomScale
+        }
+        .onChanged { _ in
+            selectedEmoji = emoji
+        }
+        .onEnded { finalDragGestureValue in
+            let offSet = finalDragGestureValue.translation / zoomScale
+
+            if emojiSelection.contains(matching: emoji) {
+                for emoji in emojiSelection {
+                    document.moveEmoji(emoji, by: offSet)
+                }
+            } else {
+                document.moveEmoji(emoji, by: offSet)
+            }
+            
+            selectedEmoji = nil 
+        }
+}
+```
+3. Update the `position` function. If the an emoji is currently being dragged, if that emoji is a selected emoji. If it is, then move all selected emojis. Otherwise, just move the selected emoji (which is not a selected emoji).
+```swift
+// View - EmojiArtDocumentView.swift
+
+private func position(for emoji: EmojiArt.Emoji, in size: CGSize) -> CGPoint  {
+    var location = emoji.location
+    location = CGPoint(x: location.x * zoomScale, y: location.y * zoomScale)
+    location = CGPoint(x: location.x + size.width/2, y: location.y + size.height/2)
+    location = CGPoint(x: location.x + panOffset.width, y: location.y + panOffset.height)
+    
+    // Check if there is a selectedEmoji
+    if let selectedEmoji = selectedEmoji {
+
+        if emojiSelection.contains(matching: selectedEmoji), emojiSelection.contains(matching: emoji){
+            location = CGPoint(x: location.x + dragOffset.width, y: location.y + dragOffset.height)
+        } else if emoji == selectedEmoji {
+            location = CGPoint(x: location.x + dragOffset.width, y: location.y + dragOffset.height)
+        }
+    }
+
+    return location
+
+}
+```
+*End of Solution*
