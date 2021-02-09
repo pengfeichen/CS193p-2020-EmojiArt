@@ -3,8 +3,7 @@
 > Projects are written in **Swift 5.1** and **Xcode Version 12.4**<br>
 > [Required Tasks](#Required-Tasks) and [Extra Credit](#Extra-Credit)
 
-## Emoji Art 
-#### Required Tasks
+## Required Tasks
 
 1. Download the version of EmojiArt from Lecture 8. Do not break anything that is
 working there as part of your solution to this assignment. 
@@ -189,3 +188,4 @@ mutating func deleteEmoji(_ emoji: EmojiArt.Emoji) {
 Text(emoji.text)
   .gesture(singleTapToSelect(emoji).exclusively(before: longPressGesture(emoji)))
 ```
+## Extra Credit
