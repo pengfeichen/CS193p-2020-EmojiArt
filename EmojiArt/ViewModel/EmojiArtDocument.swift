@@ -6,29 +6,31 @@
 //
 
 import SwiftUI
+// AnyCancellable is part of Combine
+import Combine
 
 class EmojiArtDocument: ObservableObject {
     
     static let palette: String = "🍎🍍🍅🍆🥒🥬🥦🧄🫑🧀🥨"
     
-    @Published private var emojiArt: EmojiArt {
-        didSet {
-            UserDefaults.standard.set(emojiArt.json, forKey: EmojiArtDocument.untitled)
-        }
-    }
+    @Published private var emojiArt: EmojiArt
     
     private static let untitled = "EmojiArtDocument.Untitled"
     
+    private var autosaveCancellable: AnyCancellable?
+    
     init() {
         emojiArt = EmojiArt(json: UserDefaults.standard.data(forKey: EmojiArtDocument.untitled)) ?? EmojiArt()
+        autosaveCancellable = $emojiArt.sink { emojiArt in
+            print("\(emojiArt.json?.utf8 ?? "nil")")
+            UserDefaults.standard.setValue(emojiArt.json, forKey: EmojiArtDocument.untitled)
+        }
         fetchBackgroundImageData()
     }
     
     @Published private (set) var backgroundImage: UIImage?
     
-    var emojis: [EmojiArt.Emoji] { emojiArt.emojis
-        
-    }
+    var emojis: [EmojiArt.Emoji] { emojiArt.emojis }
     
     // MARK: - Intents
     func addEmoji(_ emoji: String, at location: CGPoint, size: CGFloat) {
@@ -52,29 +54,36 @@ class EmojiArtDocument: ObservableObject {
         emojiArt.deleteEmoji(emoji)
     }
     
-    func setBackgroundURL(_ url: URL?) {
-        emojiArt.backgroundURL = url?.imageURL
-        fetchBackgroundImageData()
+    var backgroundURL: URL? {
+        get {
+            emojiArt.backgroundURL
+        }
+        set {
+            emojiArt.backgroundURL = newValue?.imageURL
+            fetchBackgroundImageData()
+        }
+
     }
     
     func newEmojiArt() {
         emojiArt = EmojiArt()
         fetchBackgroundImageData()
     }
+    private var fetchImageCancellable: AnyCancellable?
     
     private func fetchBackgroundImageData() {
         backgroundImage = nil
-        if let url = self.emojiArt.backgroundURL {
-            DispatchQueue.global(qos: .userInitiated).async {
-                if let imageData = try? Data(contentsOf: url) {
-                    DispatchQueue.main.async {
-                        if url == self.emojiArt.backgroundURL {
-                            self.backgroundImage = UIImage(data: imageData)
-                        }
-                    }
-                }
-            }
-            
+        if let url = emojiArt.backgroundURL {
+            // cancel the previous subscriber
+            fetchImageCancellable?.cancel()
+            // URLSession.shared to do simple download, which returns a publisher for the contents of the url.
+            fetchImageCancellable = URLSession.shared.dataTaskPublisher(for: url)
+                .map { data, urlResponse in UIImage(data: data) }
+                // publish on main que, returns a publisher
+                .receive(on: DispatchQueue.main)
+                .replaceError(with: nil)
+                //assign is a subscriber and only works when you have NEVER as the error, returns a AnyCancellable
+                .assign(to: \.backgroundImage, on: self)
         }
     }
 }

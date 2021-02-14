@@ -67,11 +67,12 @@ struct PaletteEditor: View {
                 }
                 Section(header: Text("Remove Emoji")) {
                     Grid(chosenPalette.map { String($0)}, id: \.self ) { emoji in
-                        Text(emoji)
+                        Text(emoji).font(Font.system(size: fontSize))
                             .onTapGesture {
                                 chosenPalette = document.removeEmoji(emoji, fromPalette: chosenPalette)
                             }
                     }
+                    .frame(height: height)
                     
                 }
 
@@ -80,6 +81,12 @@ struct PaletteEditor: View {
         }
         .onAppear{ paletteName = document.paletteNames[chosenPalette] ?? "" }
     }
+    // MARK - Drawing constants
+    var height: CGFloat {
+        CGFloat((chosenPalette.count - 1) / 6) * 70 + 70
+    }
+    
+    let fontSize: CGFloat = 40
 }
 
 struct PaletteChooser_Previews: PreviewProvider {
