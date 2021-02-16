@@ -28,8 +28,9 @@ struct PaletteChooser: View {
                 .onTapGesture {
                     showPaletteEditor = true
                 }
+                // sheet / popover both works here
                 .popover(isPresented: $showPaletteEditor){
-                    PaletteEditor(chosenPalette: $chosenPalette)
+                    PaletteEditor(chosenPalette: $chosenPalette, isShowing: $showPaletteEditor)
                         .environmentObject(document)
                         .frame(minWidth: 300, minHeight: 500)
                 }
@@ -37,6 +38,7 @@ struct PaletteChooser: View {
         }
         .fixedSize(horizontal: true, vertical: false)
     }
+    
 }
 
 
@@ -46,10 +48,20 @@ struct PaletteEditor: View {
     @State private var paletteName: String = ""
     @State private var emojisToAdd: String = ""
     @State private var emojisToRemove: String = ""
+    @Binding var isShowing: Bool
     
     var body: some View {
         VStack (spacing: 0) {
-            Text("Palette Editor").font(.headline).padding()
+            ZStack {
+                Text("Palette Editor").font(.headline).padding()
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        isShowing  = false
+                    }
+                    .padding()
+                }
+            }
             Divider()
             Form {
                 Section {
